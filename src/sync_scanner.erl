@@ -369,6 +369,10 @@ recompile_src_file(SrcFile, EnablePatching) ->
     case sync_options:get_options(SrcDir) of
         {ok, Options} ->
             case compile:file(SrcFile, [binary, return|Options]) of
+                {ok, Module, OldBinary, []} ->
+                    %% Compiling didn't change the beam code. Don't reload...
+                    {ok, [], []};
+
                 {ok, Module, OldBinary, Warnings} ->
                     %% Compiling didn't change the beam code. Don't reload...
                     print_results(Module, SrcFile, [], Warnings),
@@ -398,9 +402,11 @@ recompile_src_file(SrcFile, EnablePatching) ->
     end.
 
 
-print_results(_Module, _SrcFile, [], []) ->
+print_results(_Module, SrcFile, [], []) ->
     %% Do not print message on successful compilation;
     %% We already get a notification when the beam is reloaded.
+    Msg = io_lib:format("~s:0: Recompiled~n", [SrcFile]),
+    error_logger:info_msg(lists:flatten(Msg)),
     ok;
 
 print_results(_Module, SrcFile, [], Warnings) ->
